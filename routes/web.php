@@ -1,9 +1,31 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ResourceController;
 
-Route::get('/', function () {
-    return ['Laravel' => app()->version()];
+// Authentication Routes
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register']);
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Protected Routes
+Route::middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Resource Contribution
+    Route::get('/contribute', [ResourceController::class, 'create'])->name('contribute');
+    Route::post('/contribute', [ResourceController::class, 'store']);
+    
+    // Village View
+    Route::get('/village', [ResourceController::class, 'village'])->name('village');
 });
 
-require __DIR__.'/auth.php';
+// Homepage
+Route::get('/', function () {
+    return view('welcome');
+});

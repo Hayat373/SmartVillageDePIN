@@ -1,0 +1,26 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.display-6 {
+    font-size: 2rem;
+}
+
+.btn-success {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.btn-success:hover {
+    background-color: #0f6848;
+    border-color: #0f6848;
+}
