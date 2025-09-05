@@ -149,36 +149,53 @@ class ResourceController extends Controller
         return $resourceMessages[array_rand($resourceMessages)];
     }
 
-    public function village()
-    {
-        $user = auth()->user();
-        $villageName = $user->village_name;
+   public function village()
+{
+    $user = auth()->user();
+    $villageName = $user->village_name;
 
-        $contributions = ResourceContribution::with('user')
-            ->whereHas('user', function($query) use ($villageName) {
-                $query->where('village_name', $villageName);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+    $contributions = ResourceContribution::with('user')
+        ->whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(10);
 
-        $stats = VillageStat::where('village_name', $villageName)
-            ->select('resource_type', DB::raw('SUM(total_contributed) as total_contributed'))
-            ->groupBy('resource_type')
-            ->get()
-            ->keyBy('resource_type');
+    // Calculate totals for each resource type
+    $totals = [
+        'energy' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })->where('resource_type', 'energy')->where('status', 'confirmed')->sum('amount'),
+        
+        'bandwidth' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })->where('resource_type', 'bandwidth')->where('status', 'confirmed')->sum('amount'),
+        
+        'water' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })->where('resource_type', 'water')->where('status', 'confirmed')->sum('amount'),
+        
+        'storage' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })->where('resource_type', 'storage')->where('status', 'confirmed')->sum('amount'),
+        
+        'computing' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })->where('resource_type', 'computing')->where('status', 'confirmed')->sum('amount'),
+    ];
 
-        $predictions = $this->aiService->getCurrentPredictions($villageName);
+    $predictions = $this->aiService->getCurrentPredictions($villageName);
 
-        $topContributors = ResourceContribution::with('user')
-            ->whereHas('user', function($query) use ($villageName) {
-                $query->where('village_name', $villageName);
-            })
-            ->select('user_id', DB::raw('SUM(amount) as total_contributed'))
-            ->groupBy('user_id')
-            ->orderBy('total_contributed', 'desc')
-            ->take(5)
-            ->get();
+    $topContributors = ResourceContribution::with('user')
+        ->whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })
+        ->select('user_id', DB::raw('SUM(amount) as total_contributed'))
+        ->groupBy('user_id')
+        ->orderBy('total_contributed', 'desc')
+        ->take(5)
+        ->get();
 
-        return view('village', compact('contributions', 'stats', 'predictions', 'topContributors', 'villageName'));
-    }
+    return view('village', compact('contributions', 'totals', 'predictions', 'topContributors', 'villageName'));
+}
 }
