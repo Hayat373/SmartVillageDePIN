@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\AI\AIAnalysisController;
 
 // Authentication Routes
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
@@ -23,6 +24,10 @@ Route::middleware(['auth'])->group(function () {
     
     // Village View
     Route::get('/village', [ResourceController::class, 'village'])->name('village');
+    
+    // AI Analysis Routes
+    Route::get('/ai-analysis', [AIAnalysisController::class, 'index'])->name('ai.analysis');
+    Route::get('/prediction-history', [AIAnalysisController::class, 'predictionHistory'])->name('ai.history');
 });
 
 // Homepage

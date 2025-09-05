@@ -38,6 +38,7 @@
                                     <th>Resource</th>
                                     <th>Amount</th>
                                     <th>Date</th>
+                                    <th>Prediction</th>
                                     <th>Transaction ID</th>
                                 </tr>
                             </thead>
@@ -47,6 +48,15 @@
                                     <td>{{ ucfirst($contribution->resource_type) }}</td>
                                     <td>{{ $contribution->amount }}</td>
                                     <td>{{ $contribution->created_at->format('M d, Y') }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            @if($contribution->demand_prediction == 'high') bg-danger 
+                                            @elseif($contribution->demand_prediction == 'medium') bg-warning 
+                                            @elseif($contribution->demand_prediction == 'low') bg-success 
+                                            @else bg-secondary @endif">
+                                            {{ ucfirst($contribution->demand_prediction) }}
+                                        </span>
+                                    </td>
                                     <td class="text-truncate" style="max-width: 150px;">{{ $contribution->transaction_id }}</td>
                                 </tr>
                                 @endforeach
@@ -72,6 +82,7 @@
                 <div class="d-grid gap-2">
                     <a href="{{ route('contribute') }}" class="btn btn-success btn-lg">Contribute Resources</a>
                     <a href="{{ route('village') }}" class="btn btn-primary btn-lg">View Village Hub</a>
+                    <a href="{{ route('ai.analysis') }}" class="btn btn-warning btn-lg">AI Analysis</a>
                 </div>
             </div>
         </div>
@@ -81,12 +92,25 @@
                 <h5>AI Insights</h5>
             </div>
             <div class="card-body">
-                <p>Our AI predicts that your village will need:</p>
+                <p>Our AI analyzes community resources to help optimize allocation:</p>
                 <ul>
-                    <li>15% more energy tomorrow due to cloudy weather</li>
-                    <li>Additional bandwidth for educational content during school hours</li>
-                    <li>Water storage optimization for the coming dry season</li>
+                    <li>Monitors historical contribution patterns</li>
+                    <li>Predicts future demand based on trends</li>
+                    <li>Provides smart allocation recommendations</li>
+                    <li>Adapts to seasonal changes</li>
                 </ul>
+                <div class="text-center mt-3">
+                    <a href="{{ route('ai.analysis') }}" class="btn btn-sm btn-outline-warning">View Detailed Analysis</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white">
+                <h5>Did You Know?</h5>
+            </div>
+            <div class="card-body">
+                <p>Your contributions help our AI make better predictions for the entire community. The more data we have, the more accurate our demand forecasting becomes!</p>
             </div>
         </div>
     </div>

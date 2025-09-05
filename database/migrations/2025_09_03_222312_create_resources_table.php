@@ -14,6 +14,8 @@ class CreateResourceContributionsTable extends Migration
             $table->enum('resource_type', ['energy', 'bandwidth', 'water', 'storage']);
             $table->decimal('amount', 10, 2);
             $table->string('transaction_id')->nullable();
+            $table->string('demand_prediction')->nullable()->comment('AI prediction: high, medium, low');
+            $table->text('allocation_recommendation')->nullable();
             $table->timestamps();
         });
     }
