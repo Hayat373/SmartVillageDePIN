@@ -4,28 +4,22 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateResourceContributionsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-         {
-             Schema::create('resources', function (Blueprint $table) {
-                 $table->id();
-                 $table->foreignId('user_id')->constrained();
-                 $table->string('type');
-                 $table->float('amount');
-                 $table->string('hedera_tx_id')->nullable();
-                 $table->timestamps();
-             });
-         }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function up()
     {
-        Schema::dropIfExists('resources');
+        Schema::create('resource_contributions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('resource_type', ['energy', 'bandwidth', 'water', 'storage']);
+            $table->decimal('amount', 10, 2);
+            $table->string('transaction_id')->nullable();
+            $table->timestamps();
+        });
     }
-};
+
+    public function down()
+    {
+        Schema::dropIfExists('resource_contributions');
+    }
+}
