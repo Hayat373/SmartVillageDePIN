@@ -37,66 +37,84 @@ class ResourceController extends Controller
         return view('contribute', compact('recentContributions', 'villageStats'));
     }
 
-    public function store(StoreContributionRequest $request)
-    {
-        DB::beginTransaction();
+   public function store(StoreContributionRequest $request)
+{
+    DB::beginTransaction();
 
-        try {
-            $user = auth()->user();
-            $validated = $request->validated();
+    try {
+        $user = auth()->user();
+        $validated = $request->validated();
 
-            // Create Hedera transaction
-            $transaction = $this->hederaService->createTransaction(
-                $user->hedera_account_id,
-                $validated['amount'],
-                $validated['resource_type']
-            );
-
-            if (!$transaction['success']) {
-                throw new \Exception('Hedera transaction failed: ' . $transaction['error']);
-            }
-
-            // Get AI prediction for this contribution
-            $prediction = $this->aiService->predictResourceNeeds(
-                $validated['village_name'],
-                $validated['resource_type']
-            );
-
-            // Create resource contribution
-            $contribution = ResourceContribution::create([
-                'user_id' => $user->id,
-                'resource_type' => $validated['resource_type'],
-                'amount' => $validated['amount'],
-                'transaction_id' => $transaction['transaction_id'],
-                'status' => 'confirmed', // Simulating successful transaction
-                'ai_analysis' => json_encode([
-                    'predicted_demand' => $prediction->predicted_demand,
-                    'predicted_supply' => $prediction->predicted_supply,
-                    'allocation_recommendation' => $prediction->allocation_recommendation,
-                    'confidence_score' => $prediction->accuracy_score
-                ])
-            ]);
-
-            // Update village statistics
-            $this->updateVillageStats($validated['village_name'], $validated['resource_type'], $validated['amount']);
-
-            // Update user reputation
-            $user->increment('reputation_score', 0.5); // Small reputation boost per contribution
-
-            DB::commit();
-
-            return redirect()->route('dashboard')
-                ->with('success', "Successfully contributed {$validated['amount']} {$validated['resource_type']}! " . 
-                       "AI recommends: " . $this->generateAIMessage($prediction));
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'Contribution failed: ' . $e->getMessage())
-                ->withInput();
+        // Debug: Check if user has village_name
+        if (empty($user->village_name)) {
+            // Set default village name if not set
+            $user->village_name = $validated['village_name'] ?? 'Default Village';
+            $user->save();
         }
+
+        // Create Hedera transaction (simulated)
+        $transaction = $this->hederaService->createTransaction(
+            $user->hedera_account_id,
+            $validated['amount'],
+            $validated['resource_type']
+        );
+
+        if (!$transaction['success']) {
+            throw new \Exception('Hedera transaction failed: ' . $transaction['error']);
+        }
+
+        // Get AI prediction for this contribution
+        $prediction = $this->aiService->predictResourceNeeds(
+            $user->village_name, // Use user's village name instead of form input
+            $validated['resource_type']
+        );
+
+        // Create resource contribution
+        $contribution = ResourceContribution::create([
+            'user_id' => $user->id,
+            'resource_type' => $validated['resource_type'],
+            'amount' => $validated['amount'],
+            'transaction_id' => $transaction['transaction_id'],
+            'status' => 'confirmed',
+            'ai_analysis' => json_encode([
+                'predicted_demand' => $prediction->predicted_demand,
+                'predicted_supply' => $prediction->predicted_supply,
+                'allocation_recommendation' => $prediction->allocation_recommendation,
+                'confidence_score' => $prediction->accuracy_score
+            ])
+        ]);
+
+        // Update village statistics
+        $this->updateVillageStats($user->village_name, $validated['resource_type'], $validated['amount']);
+
+        // Update user reputation
+        $user->increment('reputation_score', 0.5);
+
+        DB::commit();
+
+        // Debug: Log the contribution
+        \Log::info('Contribution created', [
+            'user_id' => $user->id,
+            'village' => $user->village_name,
+            'contribution_id' => $contribution->id
+        ]);
+
+        return redirect()->route('dashboard')
+            ->with('success', "Successfully contributed {$validated['amount']} {$validated['resource_type']}! " . 
+                   "AI recommends: " . $this->generateAIMessage($prediction));
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        // Log the error
+        \Log::error('Contribution failed: ' . $e->getMessage());
+        
+        return redirect()->back()
+            ->with('error', 'Contribution failed: ' . $e->getMessage())
+            ->withInput();
     }
+}
+
 
     protected function updateVillageStats($villageName, $resourceType, $amount)
     {
@@ -152,7 +170,20 @@ class ResourceController extends Controller
    public function village()
 {
     $user = auth()->user();
+    
+    // Ensure user has a village name
+    if (empty($user->village_name)) {
+        $user->village_name = 'Default Village';
+        $user->save();
+    }
+    
     $villageName = $user->village_name;
+
+    // Debug: Log the village query
+    \Log::info('Village page accessed', [
+        'user_id' => $user->id,
+        'village_name' => $villageName
+    ]);
 
     $contributions = ResourceContribution::with('user')
         ->whereHas('user', function($query) use ($villageName) {
@@ -161,28 +192,33 @@ class ResourceController extends Controller
         ->orderBy('created_at', 'desc')
         ->paginate(10);
 
-    // Calculate totals for each resource type
+    // Debug: Log contributions count
+    \Log::info('Village contributions', [
+        'village_name' => $villageName,
+        'contributions_count' => $contributions->count()
+    ]);
+
+    // Get totals with a single query
+    $totalsQuery = ResourceContribution::whereHas('user', function($query) use ($villageName) {
+            $query->where('village_name', $villageName);
+        })
+        ->where('status', 'confirmed')
+        ->select('resource_type', DB::raw('SUM(amount) as total'))
+        ->groupBy('resource_type')
+        ->get();
+
+    // Convert to associative array
     $totals = [
-        'energy' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
-            $query->where('village_name', $villageName);
-        })->where('resource_type', 'energy')->where('status', 'confirmed')->sum('amount'),
-        
-        'bandwidth' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
-            $query->where('village_name', $villageName);
-        })->where('resource_type', 'bandwidth')->where('status', 'confirmed')->sum('amount'),
-        
-        'water' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
-            $query->where('village_name', $villageName);
-        })->where('resource_type', 'water')->where('status', 'confirmed')->sum('amount'),
-        
-        'storage' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
-            $query->where('village_name', $villageName);
-        })->where('resource_type', 'storage')->where('status', 'confirmed')->sum('amount'),
-        
-        'computing' => ResourceContribution::whereHas('user', function($query) use ($villageName) {
-            $query->where('village_name', $villageName);
-        })->where('resource_type', 'computing')->where('status', 'confirmed')->sum('amount'),
+        'energy' => 0,
+        'bandwidth' => 0,
+        'water' => 0,
+        'storage' => 0,
+        'computing' => 0,
     ];
+
+    foreach ($totalsQuery as $total) {
+        $totals[$total->resource_type] = $total->total;
+    }
 
     $predictions = $this->aiService->getCurrentPredictions($villageName);
 
@@ -198,4 +234,5 @@ class ResourceController extends Controller
 
     return view('village', compact('contributions', 'totals', 'predictions', 'topContributors', 'villageName'));
 }
+
 }
