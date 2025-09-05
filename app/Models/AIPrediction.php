@@ -9,6 +9,9 @@ class AIPrediction extends Model
 {
     use HasFactory;
 
+    // Explicitly define the table name
+    protected $table = 'ai_predictions'; // Use the actual table name
+
     protected $fillable = [
         'village_name', 'resource_type', 'predicted_demand',
         'predicted_supply', 'allocation_recommendation',

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'hedera' => [
+        'account_id' => env('HEDERA_ACCOUNT_ID'),
+        'private_key' => env('HEDERA_PRIVATE_KEY'),
+        'network' => env('HEDERA_NETWORK', 'testnet'),
+    ],
+
 ];
