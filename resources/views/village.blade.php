@@ -7,38 +7,18 @@
         <p class="lead">View all resource contributions and community statistics</p>
         
         <div class="row mt-4">
-            <div class="col-md-3">
-                <div class="card text-white bg-success mb-3">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Total Energy</h5>
-                        <p class="card-text display-6">{{ $totals['energy'] }} kWh</p>
+            @foreach (['energy' => 'kWh', 'bandwidth' => 'Mbps', 'water' => 'L', 'storage' => 'GB'] as $type => $unit)
+                <div class="col-md-3">
+                    <div class="card text-white {{ $type == 'energy' ? 'bg-success' : ($type == 'bandwidth' ? 'bg-info' : ($type == 'water' ? 'bg-primary' : 'bg-warning')) }} mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Total {{ ucfirst($type) }}</h5>
+                            <p class="card-text display-6">{{ $totals[$type] }} {{ $unit }}</p>
+                            <p>Prediction: {{ ucfirst($predictions[$type]['prediction']) }}</p>
+                            <p>{{ $predictions[$type]['recommendation'] }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-info mb-3">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Total Bandwidth</h5>
-                        <p class="card-text display-6">{{ $totals['bandwidth'] }} Mbps</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-primary mb-3">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Total Water</h5>
-                        <p class="card-text display-6">{{ $totals['water'] }} L</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-warning mb-3">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Total Storage</h5>
-                        <p class="card-text display-6">{{ $totals['storage'] }} GB</p>
-                    </div>
-                </div>
-            </div>
+            @endforeach
         </div>
         
         <div class="card mt-4">
@@ -56,6 +36,7 @@
                                     <th>Amount</th>
                                     <th>Date</th>
                                     <th>Transaction ID</th>
+                                    <th>Prediction</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -66,6 +47,7 @@
                                     <td>{{ $contribution->amount }}</td>
                                     <td>{{ $contribution->created_at->format('M d, Y') }}</td>
                                     <td class="text-truncate" style="max-width: 150px;">{{ $contribution->transaction_id }}</td>
+                                    <td>{{ ucfirst($contribution->demand_prediction) }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -86,19 +68,17 @@
                     <div class="col-md-6">
                         <h6>Current Allocation Strategy</h6>
                         <ul>
-                            <li>Energy: 60% immediate use, 40% storage</li>
-                            <li>Bandwidth: Priority to education and healthcare</li>
-                            <li>Water: 50% consumption, 30% agriculture, 20% reserve</li>
-                            <li>Storage: Distributed across village nodes</li>
+                            @foreach ($predictions as $type => $data)
+                                <li>{{ ucfirst($type) }}: {{ $data['recommendation'] }}</li>
+                            @endforeach
                         </ul>
                     </div>
                     <div class="col-md-6">
                         <h6>Predicted Needs (Next 7 Days)</h6>
                         <ul>
-                            <li>Energy demand will increase by 15%</li>
-                            <li>Additional 20Mbps bandwidth needed during peak hours</li>
-                            <li>Water reserves sufficient for 10 days</li>
-                            <li>Storage allocation optimal for current usage</li>
+                            @foreach ($predictions as $type => $data)
+                                <li>{{ ucfirst($type) }}: {{ ucfirst($data['prediction']) }} demand ({{ number_format($data['historical_data']['trend'], 2) }}% trend)</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
