@@ -31,7 +31,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/prediction-history', [AIAnalysisController::class, 'predictionHistory'])->name('ai.history');
 });
 
- Route::get('/create-token', [TokenController::class, 'createToken']);
 
 // Homepage
 Route::get('/', function () {

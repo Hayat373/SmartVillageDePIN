@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Process;
 
 class AIPredictionService
 {
-    public function predictDemand($resourceType, $amount, $userId)
+    public function predictDemand($resourceType, $amount, $userId = null)
     {
         // Historical data analysis
         $historicalData = ResourceContribution::where('resource_type', $resourceType)
@@ -38,8 +38,8 @@ class AIPredictionService
             $this->notifyHighDemand($resourceType, $recommendation);
         }
 
-        // Agentic Action: Reward user if contribution exceeds predicted need
-        if ($amount > $predictedNeed) {
+        // Agentic Action: Reward user if contribution exceeds predicted need and userId is provided
+        if ($userId && $amount > $predictedNeed) {
             $this->rewardUser($userId, 100); // Reward 100 VIL tokens
         }
 
@@ -101,24 +101,24 @@ class AIPredictionService
         }
     }
 
-   private function rewardUser($userId, $amount)
-{
-    $user = User::findOrFail($userId);
-    if (!$user->hedera_account_id) {
-        \Log::error("User {$userId} has no Hedera account ID");
-        return;
+    private function rewardUser($userId, $amount)
+    {
+        $user = User::findOrFail($userId);
+        if (!$user->hedera_account_id) {
+            \Log::error("User {$userId} has no Hedera account ID");
+            return;
+        }
+        $tokenId = env('HEDERA_TOKEN_ID');
+        if (!$tokenId) {
+            \Log::error("HEDERA_TOKEN_ID not set in .env");
+            return;
+        }
+        // Call Node.js script for token transfer
+        $result = Process::run("node transfer-token.js {$user->hedera_account_id} {$amount}");
+        if ($result->successful()) {
+            \Log::info("Rewarded user {$userId} with {$amount} VIL tokens (Token ID: {$tokenId})");
+        } else {
+            \Log::error("Token transfer failed: {$result->errorOutput()}");
+        }
     }
-    $tokenId = env('HEDERA_TOKEN_ID');
-    if (!$tokenId) {
-        \Log::error("HEDERA_TOKEN_ID not set in .env");
-        return;
-    }
-    // Call Node.js script for token transfer
-    $result = Process::run("node transfer-token.js {$user->hedera_account_id} {$amount}");
-    if ($result->successful()) {
-        \Log::info("Rewarded user {$userId} with {$amount} VIL tokens (Token ID: {$tokenId})");
-    } else {
-        \Log::error("Token transfer failed: {$result->errorOutput()}");
-    }
-}
 }
