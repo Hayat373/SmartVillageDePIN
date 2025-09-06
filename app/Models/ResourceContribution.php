@@ -10,7 +10,13 @@ class ResourceContribution extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'resource_type', 'amount', 'transaction_id'
+        'user_id',
+        'resource_type',
+        'amount',
+        'transaction_id',
+        'demand_prediction',
+        'allocation_recommendation'
+        
     ];
 
     public function user()
