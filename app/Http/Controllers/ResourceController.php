@@ -21,42 +21,36 @@ class ResourceController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'resource_type' => 'required|in:energy,bandwidth,water,storage',
-            'amount' => 'required|numeric|min:0.01'
-        ]);
+{
+    $request->validate([
+        'resource_type' => 'required|in:energy,bandwidth,water,storage',
+        'amount' => 'required|numeric|min:0.01'
+    ]);
 
-        try {
-            // Get AI prediction
-            $predictionResult = $this->aiService->predictDemand(
-                $request->resource_type, 
-                $request->amount
-            );
+    $contribution = ResourceContribution::create([
+        'user_id' => auth()->id(),
+        'resource_type' => $request->resource_type,
+        'amount' => $request->amount,
+        'transaction_id' => '0.0.' . rand(1000000, 9999999) . '.' . time(), // Simulated transaction
+    ]);
 
-            // Simulate Hedera transaction (for demo purposes)
-            $transactionId = '0.0.' . rand(1000000, 9999999) . '.' . time();
-            
-            // Create resource contribution with AI prediction
-            $contribution = ResourceContribution::create([
-                'user_id' => auth()->id(),
-                'resource_type' => $request->resource_type,
-                'amount' => $request->amount,
-                'transaction_id' => $transactionId,
-                'demand_prediction' => $predictionResult['prediction'],
-                'allocation_recommendation' => $predictionResult['recommendation']
-            ]);
-            
-            return redirect()->route('dashboard')
-                ->with('success', "Resource contributed successfully! AI prediction: " . 
-                       ucfirst($predictionResult['prediction']) . " demand. " .
-                       $predictionResult['recommendation']);
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Error processing your contribution: ' . $e->getMessage())
-                ->withInput();
-        }
-    }
+    // Call AI prediction with user ID
+    $predictionResult = $this->aiService->predictDemand(
+        $request->resource_type,
+        $request->amount,
+        auth()->id()
+    );
+
+    $contribution->update([
+        'demand_prediction' => $predictionResult['prediction'],
+        'allocation_recommendation' => $predictionResult['recommendation']
+    ]);
+
+    return redirect()->route('dashboard')
+        ->with('success', "Resource contributed successfully! AI prediction: " .
+               ucfirst($predictionResult['prediction']) . " demand. " .
+               $predictionResult['recommendation']);
+}
 
     public function village()
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\AI\AIAnalysisController;
+use App\Http\Controllers\TokenController;
 
 // Authentication Routes
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
@@ -30,7 +31,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/prediction-history', [AIAnalysisController::class, 'predictionHistory'])->name('ai.history');
 });
 
+ Route::get('/create-token', [TokenController::class, 'createToken']);
+
 // Homepage
 Route::get('/', function () {
     return view('welcome');
+
+   
+
 });
