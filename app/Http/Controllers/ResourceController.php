@@ -23,31 +23,42 @@ class ResourceController extends Controller
     {
         $request->validate([
             'resource_type' => 'required|in:energy,bandwidth,water,storage',
-            'amount' => 'required|numeric|min:0.01'
+            'amount' => 'required|numeric|min:0.01',
+            'hedera_tx_id' => 'nullable|string',
+            'hedera_token_tx' => 'nullable|string'
         ]);
 
-        $contribution = ResourceContribution::create([
-            'user_id' => auth()->id(),
-            'resource_type' => $request->resource_type,
-            'amount' => $request->amount,
-            'transaction_id' => '0.0.' . rand(1000000, 9999999) . '.' . time(),
-        ]);
+        try {
+            $contribution = ResourceContribution::create([
+                'user_id' => auth()->id(),
+                'resource_type' => $request->resource_type,
+                'amount' => $request->amount,
+                'transaction_id' => $request->hedera_tx_id ?? '0.0.' . rand(1000000, 9999999) . '.' . time(),
+                'hedera_token_tx' => $request->hedera_token_tx
+            ]);
 
-        $predictionResult = $this->aiService->predictDemand(
-            $request->resource_type,
-            $request->amount,
-            auth()->id()
-        );
+            $predictionResult = $this->aiService->predictDemand(
+                $request->resource_type,
+                $request->amount,
+                auth()->id()
+            );
 
-        $contribution->update([
-            'demand_prediction' => $predictionResult['prediction'],
-            'allocation_recommendation' => $predictionResult['recommendation']
-        ]);
+            \Log::info("Prediction for contribution {$contribution->id}: ", $predictionResult);
 
-        return redirect()->route('dashboard')
-            ->with('success', "Resource contributed successfully! AI prediction: " .
-                   ucfirst($predictionResult['prediction']) . " demand. " .
-                   $predictionResult['recommendation']);
+            $contribution->update([
+                'demand_prediction' => $predictionResult['prediction'],
+                'allocation_recommendation' => $predictionResult['recommendation']
+            ]);
+
+            return redirect()->route('dashboard')
+                ->with('success', "Resource contributed successfully! AI prediction: " .
+                       ucfirst($predictionResult['prediction']) . " demand. " .
+                       $predictionResult['recommendation']);
+        } catch (\Exception $e) {
+            \Log::error("Contribution failed: {$e->getMessage()}");
+            return redirect()->route('contribute')
+                ->with('error', "Failed to save contribution: {$e->getMessage()}");
+        }
     }
 
     public function village()
@@ -79,12 +90,13 @@ class ResourceController extends Controller
                 ->sum('amount');
                 
             if ($recentAmount <= 0) {
-                $recentAmount = 10; // Default value to avoid division by zero
+                $recentAmount = 10;
             }
             
             try {
                 $predictions[$type] = $this->aiService->predictDemand($type, $recentAmount);
             } catch (\Exception $e) {
+                \Log::error("Prediction failed for {$type}: {$e->getMessage()}");
                 $predictions[$type] = [
                     'prediction' => 'unknown',
                     'recommendation' => 'Error in prediction: ' . $e->getMessage(),

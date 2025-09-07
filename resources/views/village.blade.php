@@ -37,6 +37,7 @@
                                     <th>Date</th>
                                     <th>Transaction ID</th>
                                     <th>Prediction</th>
+                                    <th>Reward Tx</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -47,7 +48,16 @@
                                     <td>{{ $contribution->amount }}</td>
                                     <td>{{ $contribution->created_at->format('M d, Y') }}</td>
                                     <td class="text-truncate" style="max-width: 150px;">{{ $contribution->transaction_id }}</td>
-                                    <td>{{ ucfirst($contribution->demand_prediction) }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            @if($contribution->demand_prediction == 'high') bg-danger 
+                                            @elseif($contribution->demand_prediction == 'medium') bg-warning 
+                                            @elseif($contribution->demand_prediction == 'low') bg-success 
+                                            @else bg-secondary @endif">
+                                            {{ ucfirst($contribution->demand_prediction) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-truncate" style="max-width: 150px;">{{ $contribution->hedera_token_tx }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

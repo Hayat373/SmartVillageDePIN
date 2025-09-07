@@ -15,7 +15,8 @@ class ResourceContribution extends Model
         'amount',
         'transaction_id',
         'demand_prediction',
-        'allocation_recommendation'
+        'allocation_recommendation',
+        'hedera_token_tx'
         
     ];
 
