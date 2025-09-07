@@ -57,7 +57,7 @@
                                             {{ ucfirst($contribution->demand_prediction) }}
                                         </span>
                                     </td>
-                                    <td class="text-truncate" style="max-width: 150px;">{{ $contribution->hedera_token_tx }}</td>
+                                    <td class="text-truncate" style="max-width: 150px;">{{ $contribution->hedera_token_tx ?? 'None' }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

@@ -43,6 +43,7 @@ class ResourceController extends Controller
                 auth()->id()
             );
 
+            \Log::info("Contribution {$contribution->id} created with hedera_token_tx: {$request->hedera_token_tx}");
             \Log::info("Prediction for contribution {$contribution->id}: ", $predictionResult);
 
             $contribution->update([

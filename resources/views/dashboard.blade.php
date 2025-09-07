@@ -66,7 +66,7 @@
                                         </span>
                                     </td>
                                     <td class="text-truncate" style="max-width: 150px;">{{ $contribution->transaction_id }}</td>
-                                    <td class="text-truncate" style="max-width: 150px;">{{ $contribution->hedera_token_tx }}</td>
+                                    <td class="text-truncate" style="max-width: 150px;">{{ $contribution->hedera_token_tx ?? 'None' }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -93,42 +93,49 @@
                     <a href="{{ route('village') }}" class="btn btn-primary btn-lg">View Village Hub</a>
                     <a href="{{ route('ai.analysis') }}" class="btn btn-warning btn-lg">AI Analysis</a>
                 </div>
-            </ personally>
-            <div class="card mt-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5>AI Insights</h5>
-                </div>
-                <div class="card-body">
-                    <p>Our AI analyzes community resources to help optimize allocation:</p>
-                    <ul>
-                        <li>Monitors historical contribution patterns</li>
-                        <li>Predicts future demand based on trends</li>
-                        <li>Provides smart allocation recommendations</li>
-                        <li>Adapts to seasonal changes</li>
-                    </ul>
-                    <div class="text-center mt-3">
-                        <a href="{{ route('ai.analysis') }}" class="btn btn-sm btn-outline-warning">View Detailed Analysis</a>
-                    </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5>AI Insights</h5>
+            </div>
+            <div class="card-body">
+                <p>Our AI analyzes community resources to help optimize allocation:</p>
+                <ul>
+                    <li>Monitors historical contribution patterns</li>
+                    <li>Predicts future demand based on trends</li>
+                    <li>Provides smart allocation recommendations</li>
+                    <li>Adapts to seasonal changes</li>
+                </ul>
+                <div class="text-center mt-3">
+                    <a href="{{ route('ai.analysis') }}" class="btn btn-sm btn-outline-warning">View Detailed Analysis</a>
                 </div>
             </div>
-            
-            <div class="card mt-4">
-                <div class="card-header bg-success text-white">
-                    <h5>Did You Know?</h5>
-                </div>
-                <div class="card-body">
-                    <p>Your contributions help our AI make better predictions for the entire community. The more data we have, the more accurate our demand forecasting becomes!</p>
-                </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white">
+                <h5>Did You Know?</h5>
+            </div>
+            <div class="card-body">
+                <p>Your contributions help our AI make better predictions for the entire community. The more data we have, the more accurate our demand forecasting becomes!</p>
             </div>
         </div>
     </div>
     
-    <script src="https://unpkg.com/@hashgraph/sdk@2.64.5/dist/browser/hedera.js"></script>
+    <script src="https://unpkg.com/@hashgraph/sdk@2.65.0/dist/browser/hedera.js"></script>
     <script>
         const accountId = '{{ env('HEDERA_ACCOUNT_ID') }}';
-        const privateKey = '{{ env('HEDERA_PRIVATE_KEY') }}'; // WARNING: Insecure for production
+        const privateKey = '{{ env('HEDERA_PRIVATE_KEY') }}';
         const topicId = '{{ env('HEDERA_TOPIC_ID') }}';
         const tokenId = '{{ env('HEDERA_TOKEN_ID') }}';
+
+        if (!accountId || !privateKey || !topicId || !tokenId) {
+            document.getElementById('hedera-status').innerText = 'Error: Missing Hedera configuration in .env';
+            console.error('Missing env variables:', { accountId, privateKey: privateKey ? '****' : undefined, topicId, tokenId });
+            return;
+        }
 
         document.getElementById('resource-form').addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -136,43 +143,63 @@
             statusElement.innerText = 'Submitting to Hedera...';
 
             const resourceType = document.getElementById('resource_type').value;
-            const amount = document.getElementById('amount').value;
+            const amount = parseFloat(document.getElementById('amount').value);
 
             try {
                 const client = Hedera.Client.forTestnet();
-                client.setOperator(accountId, privateKey);
+                client.setOperator(accountId, Hedera.PrivateKey.fromStringECDSA(privateKey));
 
                 // Log contribution to HCS
-                const transaction = await new Hedera.TopicMessageSubmitTransaction({
+                const topicTransaction = await new Hedera.TopicMessageSubmitTransaction({
                     topicId: Hedera.TopicId.fromString(topicId),
                     message: `Shared ${amount} of ${resourceType}`
                 }).execute(client);
 
-                const receipt = await transaction.getReceipt(client);
-                const txId = receipt.topicSequenceNumber;
-
+                const topicReceipt = await topicTransaction.getReceipt(client);
+                const txId = topicReceipt.topicSequenceNumber || 'unknown';
                 statusElement.innerText = `Success! Logged to Hedera with Sequence: ${txId}`;
 
                 // Mint tokens as reward
-                const tokenTransaction = await new Hedera.TokenMintTransaction()
-                    .setTokenId(Hedera.TokenId.fromString(tokenId))
-                    .setAmount(5) // Reward 5 tokens per contribution
-                    .execute(client);
-                const tokenReceipt = await tokenTransaction.getReceipt(client);
-                statusElement.innerText += `\nRewarded 5 Village Tokens! Mint Tx: ${tokenReceipt.transactionId}`;
+                let tokenTxId = '';
+                try {
+                    const transactionId = Hedera.TransactionId.generate(accountId);
+                    const tokenTransaction = await new Hedera.TokenMintTransaction()
+                        .setTokenId(Hedera.TokenId.fromString(tokenId))
+                        .setAmount(5)
+                        .setTransactionId(transactionId)
+                        .execute(client);
+                    const tokenReceipt = await tokenTransaction.getReceipt(client);
+                    if (tokenReceipt.status.toString() === 'SUCCESS') {
+                        tokenTxId = transactionId.toString();
+                        statusElement.innerText += `\nRewarded 5 Village Tokens! Mint Tx: ${tokenTxId}`;
+                    } else {
+                        console.error('Token Mint Failed:', tokenReceipt);
+                        statusElement.innerText += `\nToken Mint Failed: Status ${tokenReceipt.status.toString()}`;
+                    }
+                } catch (mintError) {
+                    console.error('Token Mint Error:', mintError.message, mintError);
+                    statusElement.innerText += `\nToken Mint Failed: ${mintError.message}`;
+                }
 
                 // Submit form with transaction IDs
                 const form = document.getElementById('resource-form');
                 const formData = new FormData(form);
                 formData.append('hedera_tx_id', txId.toString());
-                formData.append('hedera_token_tx', tokenReceipt.transactionId.toString());
-                await fetch(form.action, {
+                formData.append('hedera_token_tx', tokenTxId);
+
+                const response = await fetch(form.action, {
                     method: 'POST',
                     body: formData
                 });
-                window.location = '/dashboard';
+
+                if (response.ok) {
+                    statusElement.innerText += '\nForm submitted successfully!';
+                    window.location = '/dashboard';
+                } else {
+                    throw new Error('Form submission failed');
+                }
             } catch (error) {
-                console.error('Hedera Error:', error);
+                console.error('Hedera Error:', error.message, error);
                 statusElement.innerText = `Hedera Error: ${error.message}`;
                 const form = document.getElementById('resource-form');
                 const formData = new FormData(form);
