@@ -11,13 +11,11 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
+    public function register()
     {
-        //
-        $this->app->singleton(HederaTokenService::class, function ($app) {
-            return new HederaTokenService();
+        $this->app->singleton(AIPredictionService::class, function ($app) {
+            return new AIPredictionService();
         });
-        
     }
 
     /**

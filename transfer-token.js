@@ -1,50 +1,52 @@
-const {
-    Client,
-    PrivateKey,
-    AccountId,
-    TransferTransaction,
-    TokenId,
-    TokenAssociateTransaction
-} = require("@hashgraph/sdk");
+// WARNING: Storing HEDERA_PRIVATE_KEY in .env is insecure for production. Use HashiCorp Vault.
+const { Client, PrivateKey, TransferTransaction, TransactionId } = require('@hashgraph/sdk');
 require('dotenv').config();
 
-async function transferToken(toAccountId, amount) {
+async function transferToken(toAccountId, amount, tokenId, operatorAccountId, operatorPrivateKey) {
+    if (!toAccountId || !amount || !tokenId || !operatorAccountId || !operatorPrivateKey) {
+        console.error('Missing arguments:', { toAccountId, amount, tokenId, operatorAccountId, operatorPrivateKey: operatorPrivateKey ? '****' : undefined });
+        process.exit(1);
+    }
+
+    const client = Client.forTestnet();
+    let privateKey;
     try {
-        const client = Client.forTestnet();
-        let privateKey;
-        try {
-            privateKey = PrivateKey.fromStringECDSA(process.env.HEDERA_PRIVATE_KEY);
-        } catch (e) {
-            console.log("ECDSA parsing failed, trying DER...");
-            privateKey = PrivateKey.fromStringDer(process.env.HEDERA_PRIVATE_KEY);
-        }
-        client.setOperator(AccountId.fromString(process.env.HEDERA_ACCOUNT_ID), privateKey);
-
-        const tokenId = TokenId.fromString(process.env.HEDERA_TOKEN_ID);
-
-        // Associate token with recipient account
-        const associateTx = await new TokenAssociateTransaction()
-            .setAccountId(AccountId.fromString(toAccountId))
-            .setTokenIds([tokenId])
-            .execute(client);
-        await associateTx.getReceipt(client);
-
-        // Transfer tokens
-        const transferTx = await new TransferTransaction()
-            .addTokenTransfer(tokenId, process.env.HEDERA_ACCOUNT_ID, -amount)
-            .addTokenTransfer(tokenId, toAccountId, amount)
-            .execute(client);
-        const receipt = await transferTx.getReceipt(client);
-
-        console.log(`Transferred ${amount} VIL to ${toAccountId}. Tx ID: ${transferTx.transactionId}`);
+        privateKey = PrivateKey.fromStringECDSA(operatorPrivateKey);
+        console.log('Operator Public Key:', privateKey.publicKey.toString());
     } catch (error) {
-        console.error("Transfer failed:", error);
+        console.error('Operator ECDSA Key Error:', error.message);
+        try {
+            privateKey = PrivateKey.fromStringDer(operatorPrivateKey);
+            console.log('Operator Public Key (DER):', privateKey.publicKey.toString());
+        } catch (derError) {
+            console.error('DER Key Error:', derError.message);
+            process.exit(1);
+        }
+    }
+    client.setOperator(operatorAccountId, privateKey);
+
+    try {
+        const transactionId = TransactionId.generate(operatorAccountId);
+        const transferTransaction = await new TransferTransaction()
+            .addTokenTransfer(tokenId, operatorAccountId, -amount)
+            .addTokenTransfer(tokenId, toAccountId, amount)
+            .setTransactionId(transactionId)
+            .freezeWith(client)
+            .sign(privateKey);
+        const response = await transferTransaction.execute(client);
+        const receipt = await response.getReceipt(client);
+        console.log('Transfer Status:', receipt.status.toString());
+        console.log('Transfer Tx ID:', transactionId.toString());
+        console.log('Receipt:', {
+            status: receipt.status.toString(),
+            transactionId: receipt.transactionId ? receipt.transactionId.toString() : transactionId.toString()
+        });
+        process.stdout.write(transactionId.toString());
+    } catch (error) {
+        console.error('Transfer Error:', error.message, error);
+        process.exit(1);
     }
 }
 
-if (process.argv.length !== 4) {
-    console.error("Usage: node transfer-token.js <toAccountId> <amount>");
-    process.exit(1);
-}
-
-transferToken(process.argv[2], parseInt(process.argv[3]));
+const [,, toAccountId, amount, tokenId, operatorAccountId, operatorPrivateKey] = process.argv;
+transferToken(toAccountId, parseInt(amount), tokenId, operatorAccountId, operatorPrivateKey);
