@@ -35,7 +35,22 @@ body {
     backdrop-filter: blur(10px);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+.card-body{
+    color: var(--text-primary);
+}
+.card-title{
+    color: var(--text-primary);
+}
 
+.table-responsive{
+    color: var(--text-primary);
+}
+.small{
+    color: var(--text-secondary)    ;
+}
+.text-muted{
+    color: var(--text-secondary) !important;
+}
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 40px rgba(0, 255, 136, 0.15);

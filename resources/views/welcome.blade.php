@@ -143,6 +143,21 @@
         .glow-effect:hover::after {
             opacity: 1;
         }
+
+        .text-muted{
+            color: var(--text-secondary) !important;
+        }
+
+        .card-title{
+            color: white !important;
+        }
+
+        .card-text{
+            color: var(--text-secondary) !important;
+        }
+        #how-it-words{
+            
+        }
         
         @keyframes fadeInUp {
             from {
