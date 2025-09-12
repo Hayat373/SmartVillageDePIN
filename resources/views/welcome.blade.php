@@ -151,6 +151,9 @@
         .card-title{
             color: white !important;
         }
+        .card-body{
+            color: var(--text-secondary) !important;
+        }
 
         .card-text{
             color: var(--text-secondary) !important;
@@ -438,73 +441,7 @@
         </div>
     </section>
 
-    <!-- Testimonials Section -->
-    <section class="py-5 bg-dark">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">What Communities Are Saying</h2>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 testiominal-card border-0">
-                        <div class="card-body">
-                            <p class="card-text">"SmartVillage has transformed our community. We now have reliable electricity for our school and clinic thanks to shared solar resources."</p>
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="mb-0">John Doe</h6>
-                                    <small class="text-muted">Community Leader, Kenya</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 testiominal-card border-0">
-                        <div class="card-body">
-                            <p class="card-text">"The AI predictions help us optimize our water distribution, especially during dry seasons. This technology is a game-changer for rural areas."</p>
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="mb-0">Mary Williams</h6>
-                                    <small class="text-muted">Water Committee, Nigeria</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 testiominal-card border-0">
-                        <div class="card-body">
-                            <p class="card-text">"Thanks to the bandwidth sharing program, our students can now access online educational resources. This has dramatically improved learning outcomes."</p>
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="mb-0">David Chen</h6>
-                                    <small class="text-muted">Teacher, Ghana</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- CTA Section -->
     <section class="py-5" style="background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));">
@@ -537,14 +474,6 @@
                         <li><a href="#features" class="text-muted">Features</a></li>
                         <li><a href="#how-it-works" class="text-muted">How It Works</a></li>
                         <li><a href="#impact" class="text-muted">Impact</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                    <h5>Connect</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted"><i class="fab fa-twitter me-2"></i>Twitter</a></li>
-                        <li><a href="#" class="text-muted"><i class="fab fa-linkedin me-2"></i>LinkedIn</a></li>
-                        <li><a href="#" class="text-muted"><i class="fab fa-github me-2"></i>GitHub</a></li>
                     </ul>
                 </div>
             </div>
