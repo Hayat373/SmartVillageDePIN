@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Services;
-
 use App\Models\ResourceContribution;
 use App\Models\User;
 use Carbon\Carbon;
@@ -40,11 +38,6 @@ class AIPredictionService
             // Agentic Action: Notify on high demand
             if ($prediction === 'high') {
                 $this->notifyHighDemand($resourceType, $recommendation);
-            }
-
-            // Agentic Action: Reward user if contribution exceeds predicted need
-            if ($userId && $amount > $predictedNeed) {
-                $this->rewardUser($userId, 100); // Reward 100 VIL tokens
             }
 
             return [
@@ -125,39 +118,38 @@ class AIPredictionService
         }
     }
 
-    private function rewardUser($userId, $amount)
+    public function rewardUser($userId, $amount)
     {
         try {
             $user = User::findOrFail($userId);
             if (!$user->hedera_account_id) {
                 Log::error("User {$userId} has no Hedera account ID");
-                return;
+                return null;
             }
             $tokenId = env('HEDERA_TOKEN_ID');
-            if (!$tokenId) {
-                Log::error("HEDERA_TOKEN_ID not set in .env");
-                return;
-            }
-            // Ensure operator account has sufficient tokens
             $operatorAccountId = env('HEDERA_ACCOUNT_ID');
             $operatorPrivateKey = env('HEDERA_PRIVATE_KEY');
-            if (!$operatorAccountId || !$operatorPrivateKey) {
-                Log::error("Missing HEDERA_ACCOUNT_ID or HEDERA_PRIVATE_KEY in .env");
-                return;
+            if (!$tokenId || !$operatorAccountId || !$operatorPrivateKey) {
+                Log::error("Missing HEDERA_TOKEN_ID, HEDERA_ACCOUNT_ID, or HEDERA_PRIVATE_KEY in .env");
+                return null;
             }
 
             // Call Node.js script for token transfer
             $command = "node transfer-token.js {$user->hedera_account_id} {$amount} {$tokenId} {$operatorAccountId} {$operatorPrivateKey}";
             $result = Process::run($command);
             if ($result->successful()) {
+                $transactionId = trim($result->output());
                 Log::info("Rewarded user {$userId} with {$amount} VIL tokens (Token ID: {$tokenId})", [
-                    'transaction_id' => $result->output()
+                    'transaction_id' => $transactionId
                 ]);
+                return $transactionId;
             } else {
                 Log::error("Token transfer failed for user {$userId}: {$result->errorOutput()}");
+                return null;
             }
         } catch (\Exception $e) {
             Log::error("Reward user {$userId} failed: {$e->getMessage()}");
+            return null;
         }
     }
 }
